@@ -56,7 +56,7 @@ def random_colors(N, bright=True):
     convert to RGB.
     """
     brightness = 1.0 if bright else 0.7
-    hsv = [(i / N, 1, brightness) for i in range(N)]
+    hsv = [(float(i) / N, 1, brightness) for i in range(N)]
     colors = list(map(lambda c: colorsys.hsv_to_rgb(*c), hsv))
     random.shuffle(colors)
     return colors
@@ -75,7 +75,7 @@ def apply_mask(image, mask, color, alpha=0.5):
 
 def display_instances(image, boxes, masks, class_ids, class_names,
                       scores=None, title="",
-                      figsize=(16, 16), ax=None):
+                      figsize=(16, 16), ax=None, class_colors=None):
     """
     boxes: [num_instance, (y1, x1, y2, x2, class_id)] in image coordinates.
     masks: [height, width, num_instances]
@@ -95,7 +95,8 @@ def display_instances(image, boxes, masks, class_ids, class_names,
         _, ax = plt.subplots(1, figsize=figsize)
 
     # Generate random colors
-    colors = random_colors(N)
+    if class_colors is None:
+        colors = random_colors(N)
 
     # Show area outside image boundaries.
     height, width = image.shape[:2]
@@ -106,7 +107,11 @@ def display_instances(image, boxes, masks, class_ids, class_names,
 
     masked_image = image.astype(np.uint32).copy()
     for i in range(N):
-        color = colors[i]
+        class_id = class_ids[i]
+        if class_colors is None:
+            color = colors[i]
+        else:
+            color = class_colors[class_id]
 
         # Bounding box
         if not np.any(boxes[i]):
@@ -119,7 +124,6 @@ def display_instances(image, boxes, masks, class_ids, class_names,
         ax.add_patch(p)
 
         # Label
-        class_id = class_ids[i]
         score = scores[i] if scores is not None else None
         label = class_names[class_id]
         x = random.randint(x1, (x1 + x2) // 2)
@@ -143,8 +147,8 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
     ax.imshow(masked_image.astype(np.uint8))
-    plt.show()
-    
+    #plt.show()
+
 
 def draw_rois(image, rois, refined_rois, mask, class_ids, class_names, limit=10):
     """

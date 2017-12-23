@@ -16,8 +16,9 @@ import tensorflow as tf
 import scipy.misc
 import skimage.color
 import skimage.io
-import urllib.request
+from six.moves.urllib import request
 import shutil
+import contextlib
 
 # URL from which to download the latest COCO trained weights
 COCO_MODEL_URL = "https://github.com/matterport/Mask_RCNN/releases/download/v2.0/mask_rcnn_coco.h5"
@@ -702,7 +703,7 @@ def download_trained_weights(coco_model_path, verbose=1):
     """
     if verbose > 0:
         print("Downloading pretrained model to " + coco_model_path + " ...")
-    with urllib.request.urlopen(COCO_MODEL_URL) as resp, open(coco_model_path, 'wb') as out:
+    with contextlib.closing(request.urlopen(COCO_MODEL_URL)) as resp, open(coco_model_path, 'wb') as out:
         shutil.copyfileobj(resp, out)
     if verbose > 0:
         print("... done downloading pretrained model!")
