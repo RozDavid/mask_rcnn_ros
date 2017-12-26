@@ -12,7 +12,7 @@ add_message_files(
 
 
 generate_messages(
-  DEPENDENCIES std_msgs sensor_msgs cv_bridge vision_opencv
+  DEPENDENCIES std_msgs sensor_msgs
 )
 
 
