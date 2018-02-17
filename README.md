@@ -70,9 +70,8 @@ If you want to train the model on youer own class definition or dataset, try it 
 There is a simple example launch file using [RGB-D SLAM Dataset](https://vision.in.tum.de/data/datasets/rgbd-dataset/download).
 
 ~~~bash
-$ cd mask_rcnn_ros/examples
-$ ./download_example_bag.sh
-$ roslaunch example.launch
+$ ./scripts/download_freiburg3_rgbd_example_bag.sh
+$ roslaunch mask_rcnn_ros freiburg3_rgbd_example.launch
 ~~~
 
 Then RViz window will appear and show result like following:
