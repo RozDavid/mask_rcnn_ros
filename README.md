@@ -9,7 +9,7 @@ Most of core algorithm code was based on [Mask R-CNN implementation by Matterpor
 ## Training
 
 This repository doesn't contain code for training Mask R-CNN network model.
-If you want to train the model on youer own class definition or dataset, try it on [the upstream reposity](https://github.com/matterport/Mask_RCNN) and give the result weight to `model_path` parameter.
+If you want to train the model on your own class definition or dataset, try it on [the upstream reposity](https://github.com/matterport/Mask_RCNN) and give the result weight to `model_path` parameter.
 
 
 ## Requirements
