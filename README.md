@@ -77,5 +77,5 @@ $ roslaunch mask_rcnn_ros freiburg3_rgbd_example.launch
 Then RViz window will appear and show result like following:
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/ethz-asl/mask_rcnn_ros/blob/master/doc/maskrcnnros.gif" width="700">
+<img src="https://github.com/ethz-asl/mask_rcnn_ros/raw/master/doc/maskrcnnros.gif" width="700">
 </p>
