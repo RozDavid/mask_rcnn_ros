@@ -196,7 +196,7 @@ def display_instances_plt(image, boxes, masks, class_ids, class_names,
             # Skip this instance. Has no bbox. Likely lost in image cropping.
             continue
         y1, x1, y2, x2 = boxes[i]
-        p = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=6,
+        p = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=2,
                               alpha=0.7, linestyle="dashed",
                               edgecolor=color, facecolor='none')
         ax.add_patch(p)
@@ -207,7 +207,7 @@ def display_instances_plt(image, boxes, masks, class_ids, class_names,
         x = random.randint(x1, (x1 + x2) // 2)
         caption = "{} {:.3f}".format(label, score) if score else label
         ax.text(x1, y1 + 8, caption,
-                color='black', size=40, bbox=dict(boxstyle='square,pad=0.2', fc='white', ec='black'))
+                color='black', size=17, bbox=dict(boxstyle='square,pad=0.2', fc='white', ec='black'))
 
         # Mask
         mask = masks[:, :, i]
@@ -222,7 +222,7 @@ def display_instances_plt(image, boxes, masks, class_ids, class_names,
         for verts in contours:
             # Subtract the padding and flip (y, x) to (x, y)
             verts = np.fliplr(verts) - 1
-            p = Polygon(verts, facecolor="none", edgecolor='black', lw=5)
+            p = Polygon(verts, facecolor="none", edgecolor='black', lw=2)
             ax.add_patch(p)
     ax.imshow(masked_image.astype(np.uint8))
     fig.canvas.draw()

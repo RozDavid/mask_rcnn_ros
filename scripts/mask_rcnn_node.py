@@ -2,9 +2,10 @@
 import os
 import threading
 import numpy as np
-
 import cv2
 from cv_bridge import CvBridge
+import matplotlib.pyplot as plt
+
 import rospy
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import RegionOfInterest
@@ -45,7 +46,6 @@ class InferenceConfig(coco.CocoConfig):
     # one image at a time. Batch size = GPU_COUNT * IMAGES_PER_GPU
     GPU_COUNT = 1
     IMAGES_PER_GPU = 1
-
 
 class MaskRCNNNode(object):
     def __init__(self):
@@ -103,7 +103,7 @@ class MaskRCNNNode(object):
 
                 # Visualize results
                 if self._visualization:
-                    cv_result = self._visualize_cv(result, np_image)
+                    cv_result = self._visualize_plt(result, np_image)
                     image_msg = self._cv_bridge.cv2_to_imgmsg(cv_result, 'bgr8')
                     vis_pub.publish(image_msg)
 
@@ -159,12 +159,30 @@ class MaskRCNNNode(object):
         result = result.reshape((int(h), int(w), 3))
         return result
 
-    def _visualize_cv(self, result, image):
+    def _get_fig_ax(self):
+        """Return a Matplotlib Axes array to be used in
+        all visualizations. Provide a
+        central point to control graph sizes.
 
-        image = visualize.display_instances_cv(image, result['rois'], result['masks'],
-                                               result['class_ids'], CLASS_NAMES,
-                                               result['scores'],
-                                               class_colors=self._class_colors)
+        Change the default size attribute to control the size
+        of rendered images
+        """
+        fig, ax = plt.subplots(1)
+        plt.subplots_adjust(
+            left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
+        return fig, ax
+
+    def _visualize_plt(self, result, image):
+        fig, ax = self._get_fig_ax()
+        image = visualize.display_instances_plt(
+            image,
+            result['rois'],
+            result['masks'],
+            result['class_ids'],
+            CLASS_NAMES,
+            result['scores'],
+            fig=fig,
+            ax=ax)
 
         return image
 
