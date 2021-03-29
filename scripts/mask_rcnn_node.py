@@ -1,26 +1,30 @@
 #!/usr/bin/env python
 import os
+import sys
 import threading
 import numpy as np
+from cv_bridge import CvBridge, CvBridgeError
 import cv2
-from cv_bridge import CvBridge
 import matplotlib.pyplot as plt
 
 import rospy
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import RegionOfInterest
 
-from mask_rcnn_ros import coco
-from mask_rcnn_ros import utils
-from mask_rcnn_ros import model as modellib
-from mask_rcnn_ros import visualize
-from mask_rcnn_ros.msg import Result
+curPath = os.path.abspath(os.path.dirname(__file__))
+rootPath = os.path.split(curPath)[0]
+sys.path.append(rootPath + "/src/mask_rcnn_ros")
 
+from src.mask_rcnn_ros import coco
+from src.mask_rcnn_ros import utils
+from src.mask_rcnn_ros import model as modellib
+from src.mask_rcnn_ros import visualize
+from mask_rcnn_ros.msg import Result
 
 # Local path to trained weights file
 ROS_HOME = os.environ.get('ROS_HOME', os.path.join(os.environ['HOME'], '.ros'))
 COCO_MODEL_PATH = os.path.join(ROS_HOME, 'mask_rcnn_coco.h5')
-RGB_TOPIC = '/camera/rgb/image_raw'
+RGB_TOPIC = '/esoptron_laptop/color/image_raw'
 
 # COCO Class names
 # Index of the class in the list is its ID. For example, to get ID of
@@ -56,7 +60,7 @@ class MaskRCNNNode(object):
         config.display()
 
         # Get input RGB topic.
-        self._rgb_input_topic = rospy.get_param('~input', RGB_TOPIC)
+        self._rgb_input_topic = rospy.get_param('~input_rgb', RGB_TOPIC)
 
         self._visualization = rospy.get_param('~visualization', True)
 
@@ -98,7 +102,7 @@ class MaskRCNNNode(object):
                 continue
 
             if msg is not None:
-                np_image = self._cv_bridge.imgmsg_to_cv2(msg, 'bgr8')
+                np_image = self._cv_bridge.imgmsg_to_cv2(msg, desired_encoding='rgb8')
 
                 # Run detection
                 results = self._model.detect([np_image], verbose=0)

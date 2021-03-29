@@ -1,10 +1,15 @@
 <launch>
-  <arg name="sensor_name" default="primesense" />
-  <arg name="visualize" default="false" />
+  
+  <arg name="sensor_name" default="esoptron_laptop" />
+  <arg name="sensor_type" default="realsense" />
+  <arg name="visualize" default="true" />
+
+  <arg name="rgb_image_sub_topic" default="/$(arg sensor_name)/color/image_raw" />
 
   <node name="mask_rcnn" pkg="mask_rcnn_ros" type="mask_rcnn_node.py" output="log">
-    <remap from="~input" to="~rgb_image_sub_topic" />
-    <rosparam command="load" file="$(find depth_segmentation)/cfg/$(arg sensor_name)_topics.yaml"/>
+
+    <param name="~input_rgb" value="$(arg rgb_image_sub_topic)" />
+    <param name="~model_path" value="$(find mask_rcnn_ros)/model/mask_rcnn_coco.h5" />
     <param name="~visualization" value="$(arg visualize)" />
   </node>
 </launch>
