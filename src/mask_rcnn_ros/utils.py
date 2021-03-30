@@ -16,6 +16,7 @@ import tensorflow as tf
 import scipy.misc
 import skimage.color
 import skimage.io
+import skimage.transform
 from six.moves.urllib import request
 import shutil
 import contextlib
@@ -417,7 +418,7 @@ def resize_image(image, min_dim=None, max_dim=None, padding=False):
             scale = max_dim / image_max
     # Resize image and mask
     if scale != 1:
-        image = scipy.misc.imresize(
+        image = skimage.transform.resize(
             image, (int(round(h * scale)), int(round(w * scale))))
     # Need padding?
     if padding:

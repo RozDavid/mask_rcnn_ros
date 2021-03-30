@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import os
 import sys
 import threading
@@ -14,17 +14,23 @@ from sensor_msgs.msg import RegionOfInterest
 curPath = os.path.abspath(os.path.dirname(__file__))
 rootPath = os.path.split(curPath)[0]
 sys.path.append(rootPath + "/src/mask_rcnn_ros")
+COCO_MODEL_PATH = './../model/mask_rcnn_coco.h5'
 
-from src.mask_rcnn_ros import coco
-from src.mask_rcnn_ros import utils
-from src.mask_rcnn_ros import model as modellib
-from src.mask_rcnn_ros import visualize
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+from mask_rcnn_ros import coco
+from mask_rcnn_ros import utils
+from mask_rcnn_ros import model as modellib
+from mask_rcnn_ros import visualize
 from mask_rcnn_ros.msg import Result
 
-# Local path to trained weights file
-ROS_HOME = os.environ.get('ROS_HOME', os.path.join(os.environ['HOME'], '.ros'))
-COCO_MODEL_PATH = os.path.join(ROS_HOME, 'mask_rcnn_coco.h5')
-RGB_TOPIC = '/esoptron_laptop/color/image_raw'
+from keras.preprocessing.image import load_img as keras_load_img
+from keras.preprocessing.image import img_to_array as keras_image_to_array
+
+
+RGB_TOPIC = '/hp_laptop/color/image_color'
 
 # COCO Class names
 # Index of the class in the list is its ID. For example, to get ID of
@@ -82,7 +88,7 @@ class MaskRCNNNode(object):
 
         self._class_colors = visualize.random_colors(len(CLASS_NAMES))
 
-        self._publish_rate = rospy.get_param('~publish_rate', 100)
+        self._publish_rate = rospy.get_param('~publish_rate', 10)
 
     def run(self):
         self._result_pub = rospy.Publisher('~result', Result, queue_size=1)
@@ -102,7 +108,11 @@ class MaskRCNNNode(object):
                 continue
 
             if msg is not None:
-                np_image = self._cv_bridge.imgmsg_to_cv2(msg, desired_encoding='rgb8')
+
+                np_image = self._cv_bridge.imgmsg_to_cv2(msg, desired_encoding='rgb8').astype(np.float32)
+
+                #np_image = keras_load_img('./../bags/elephant.jpg')
+                #np_image = keras_image_to_array(np_image)
 
                 # Run detection
                 results = self._model.detect([np_image], verbose=0)
@@ -113,7 +123,7 @@ class MaskRCNNNode(object):
                 # Visualize results
                 if self._visualization:
                     cv_result = self._visualize_plt(result, np_image)
-                    image_msg = self._cv_bridge.cv2_to_imgmsg(cv_result, 'bgr8')
+                    image_msg = self._cv_bridge.cv2_to_imgmsg(cv_result, 'rgb8')
                     vis_pub.publish(image_msg)
 
             rate.sleep()
@@ -123,10 +133,10 @@ class MaskRCNNNode(object):
         result_msg.header = msg.header
         for i, (y1, x1, y2, x2) in enumerate(result['rois']):
             box = RegionOfInterest()
-            box.x_offset = np.asscalar(x1)
-            box.y_offset = np.asscalar(y1)
-            box.height = np.asscalar(y2 - y1)
-            box.width = np.asscalar(x2 - x1)
+            box.x_offset = x1.item()
+            box.y_offset = y1.item()
+            box.height = (y2 - y1).item()
+            box.width = (x2 - x1).item()
             result_msg.boxes.append(box)
 
             class_id = result['class_ids'][i]

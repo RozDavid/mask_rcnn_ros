@@ -85,7 +85,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     scores: (optional) confidence scores for each box
     figsize: (optional) the size of the image.
     """
-    # Number of instances
+    # Number of instancesshift = np.array([0, 0,
     N = boxes.shape[0]
     if not N:
         print("\n*** No instances to display *** \n")
