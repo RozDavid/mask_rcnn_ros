@@ -20,10 +20,10 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-from mask_rcnn_ros import coco
-from mask_rcnn_ros import utils
-from mask_rcnn_ros import model as modellib
-from mask_rcnn_ros import visualize
+from src.mask_rcnn_ros import coco
+from src.mask_rcnn_ros import utils
+from src.mask_rcnn_ros import model as modellib
+from src.mask_rcnn_ros import visualize
 from mask_rcnn_ros.msg import Result
 
 from keras.preprocessing.image import load_img as keras_load_img
