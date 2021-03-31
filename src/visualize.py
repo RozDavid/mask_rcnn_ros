@@ -62,6 +62,11 @@ def random_colors(N, bright=True):
     random.shuffle(colors)
     return colors
 
+def return_color_table(class_labels):
+
+
+    return colors
+
 
 def apply_mask(image, mask, color, alpha=0.5):
     """Apply the given mask to the image.
@@ -230,6 +235,35 @@ def display_instances_plt(image, boxes, masks, class_ids, class_names,
     img = np.fromstring(fig.canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)
     plt.close(fig)
     return img
+
+
+def display_masks_plt(image, masks, class_ids, class_names,
+                          scores=None, class_colors=None):
+    """
+    masks: [height, width, num_instances]
+    class_ids: [num_instances]
+    class_names: list of class names of the dataset
+    scores: (optional) confidence scores for each box
+    """
+    # Number of instances
+    N = masks.shape[-1]
+
+    # Generate random colors
+    if class_colors is None:
+        colors = random_colors(N)
+
+    masked_image = image.copy()
+    for i in range(N):
+
+        class_id = class_ids[i]
+        if class_colors is None:
+            color = colors[i]
+        else:
+            color = class_colors[class_id]
+
+        masked_image[masks[:, :, i] > 0] = color
+
+    return masked_image
 
 
 def display_instances_cv(image, boxes, masks, class_ids, class_names,

@@ -20,6 +20,7 @@ import skimage.transform
 from six.moves.urllib import request
 import shutil
 import contextlib
+import argparse
 
 # URL from which to download the latest COCO trained weights
 COCO_MODEL_URL = "https://github.com/matterport/Mask_RCNN/releases/download/v2.0/mask_rcnn_coco.h5"
@@ -243,7 +244,7 @@ class Dataset(object):
         def image_reference(self, image_id):
             ...
 
-    See COCODataset and ShapesDataset as examples.
+    See COCODataset.py and ShapesDataset as examples.
     """
 
     def __init__(self, class_map=None):
@@ -729,3 +730,14 @@ def download_trained_weights(coco_model_path, verbose=1):
         shutil.copyfileobj(resp, out)
     if verbose > 0:
         print("... done downloading pretrained model!")
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import os
 import sys
+import argparse
 import threading
 import numpy as np
-from cv_bridge import CvBridge, CvBridgeError
-import cv2
+from cv_bridge import CvBridge
 import matplotlib.pyplot as plt
 
 import rospy
@@ -14,42 +14,21 @@ from sensor_msgs.msg import RegionOfInterest
 curPath = os.path.abspath(os.path.dirname(__file__))
 rootPath = os.path.split(curPath)[0]
 sys.path.append(rootPath + "/src/mask_rcnn_ros")
-COCO_MODEL_PATH = './../model/mask_rcnn_coco.h5'
+COCO_MODEL_PATH = '../model/mask_rcnn_coco.h5'
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-from src.mask_rcnn_ros import coco
-from src.mask_rcnn_ros import utils
-from src.mask_rcnn_ros import model as modellib
-from src.mask_rcnn_ros import visualize
+import coco
+import utils
+import model as modellib
+import visualize
 from mask_rcnn_ros.msg import Result
-
-from keras.preprocessing.image import load_img as keras_load_img
-from keras.preprocessing.image import img_to_array as keras_image_to_array
-
+import COCODataset as dataset
+from COCODataset import _get_colormap as COCOColormap
 
 RGB_TOPIC = '/hp_laptop/color/image_color'
-
-# COCO Class names
-# Index of the class in the list is its ID. For example, to get ID of
-# the teddy bear class, use: CLASS_NAMES.index('teddy bear')
-CLASS_NAMES = ['BG', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
-               'bus', 'train', 'truck', 'boat', 'traffic light',
-               'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird',
-               'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear',
-               'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie',
-               'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball',
-               'kite', 'baseball bat', 'baseball glove', 'skateboard',
-               'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup',
-               'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
-               'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza',
-               'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed',
-               'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote',
-               'keyboard', 'cell phone', 'microwave', 'oven', 'toaster',
-               'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors',
-               'teddy bear', 'hair drier', 'toothbrush']
 
 
 class InferenceConfig(coco.CocoConfig):
@@ -65,34 +44,53 @@ class MaskRCNNNode(object):
         config = InferenceConfig()
         config.display()
 
-        # Get input RGB topic.
-        self._rgb_input_topic = rospy.get_param('~input_rgb', RGB_TOPIC)
+        parser = argparse.ArgumentParser()
 
-        self._visualization = rospy.get_param('~visualization', True)
+        # Parse arguments for global params
+        parser.add_argument('--input_rgb_topic', type=str, default='/hp_laptop/color/image_color',
+                            help='RGB images to run inference on')
+        parser.add_argument('--model_path', type=str, default=COCO_MODEL_PATH,
+                            help='MASK RCNN checkpoint path - download from the matterport github repo')
+        parser.add_argument("--visualization", default=True, type=utils.str2bool, nargs='?',
+                            help="If we would like to visualize the results with masks, names and confidence")
+        parser.add_argument("--semantic_topic_name", default='/semantics/semantic_image',
+                            help="The output topic name for the semantically segmented image")
+        self.args = parser.parse_args()
+
+        self._rgb_input_topic = self.args.input_rgb_topic
+        model_path = self.args.model_path
+        self._visualization = self.args.visualization
+        self._semantic_topic_name = self.args.semantic_topic_name
 
         # Create model object in inference mode.
         self._model = modellib.MaskRCNN(mode="inference", model_dir="",
                                         config=config)
-        # Load weights trained on MS-COCO
-        model_path = rospy.get_param('~model_path', COCO_MODEL_PATH)
+
+
         # Download COCO trained weights from Releases if needed
         if model_path == COCO_MODEL_PATH and not os.path.exists(COCO_MODEL_PATH):
             utils.download_trained_weights(COCO_MODEL_PATH)
 
+        # Load weights trained on MS-COCO
         self._model.load_weights(model_path, by_name=True)
 
-        self._class_names = rospy.get_param('~class_names', CLASS_NAMES)
+        CLASS_NAMES = dataset.COCODataset.CLASS_NAMES
+        CLASS_COLORS = COCOColormap(len(CLASS_NAMES)).tolist()
+
+        self._class_names = CLASS_NAMES
+        self._focused_names = dataset.COCODataset.FOCUSED_NAMES
+        # self._class_colors = visualize.random_colors(len(CLASS_NAMES))
+        self._class_colors = CLASS_COLORS
 
         self._last_msg = None
         self._msg_lock = threading.Lock()
 
-        self._class_colors = visualize.random_colors(len(CLASS_NAMES))
-
-        self._publish_rate = rospy.get_param('~publish_rate', 10)
+        self._publish_rate = 20
 
     def run(self):
         self._result_pub = rospy.Publisher('~result', Result, queue_size=1)
         vis_pub = rospy.Publisher('~visualization', Image, queue_size=1)
+        semantics_publisher = rospy.Publisher(self._semantic_topic_name, Image, queue_size=1)
 
         rospy.Subscriber(self._rgb_input_topic, Image,
                          self._image_callback, queue_size=1)
@@ -122,9 +120,13 @@ class MaskRCNNNode(object):
 
                 # Visualize results
                 if self._visualization:
-                    cv_result = self._visualize_plt(result, np_image)
-                    image_msg = self._cv_bridge.cv2_to_imgmsg(cv_result, 'rgb8')
+                    visualization_result = self._visualize_plt(result, np_image)
+                    image_msg = self._cv_bridge.cv2_to_imgmsg(visualization_result, 'rgb8')
                     vis_pub.publish(image_msg)
+
+                semantic_result = self._semantic_plt(result, np_image).astype(np.uint8)
+                image_msg = self._cv_bridge.cv2_to_imgmsg(semantic_result, 'rgb8')
+                semantics_publisher.publish(image_msg)
 
             rate.sleep()
 
@@ -143,7 +145,8 @@ class MaskRCNNNode(object):
             result_msg.class_ids.append(class_id)
 
             class_name = self._class_names[class_id]
-            result_msg.class_names.append(class_name)
+            if class_name in self._focused_names:
+                result_msg.class_names.append(class_name)
 
             score = result['scores'][i]
             result_msg.scores.append(score)
@@ -167,7 +170,7 @@ class MaskRCNNNode(object):
         canvas = FigureCanvasAgg(fig)
         axes = fig.gca()
         visualize.display_instances(image, result['rois'], result['masks'],
-                                    result['class_ids'], CLASS_NAMES,
+                                    result['class_ids'], self._class_names,
                                     result['scores'], ax=axes,
                                     class_colors=self._class_colors)
         fig.tight_layout()
@@ -198,10 +201,23 @@ class MaskRCNNNode(object):
             result['rois'],
             result['masks'],
             result['class_ids'],
-            CLASS_NAMES,
+            self._class_names,
             result['scores'],
             fig=fig,
             ax=ax)
+
+        return image
+
+    def _semantic_plt(self, result, image):
+
+        fig, ax = self._get_fig_ax()
+        image = visualize.display_masks_plt(
+            image,
+            result['masks'],
+            result['class_ids'],
+            self._class_names,
+            result['scores'],
+            class_colors=self._class_colors)
 
         return image
 
