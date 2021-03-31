@@ -590,7 +590,7 @@ def display_table(table):
 
 
 def display_weight_stats(model):
-    """Scans all the weights in the model and returns a list of tuples
+    """Scans all the weights in the models and returns a list of tuples
     that contain stats about each weight.
     """
     layers = model.get_trainable_layers()

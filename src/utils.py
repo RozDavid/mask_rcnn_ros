@@ -725,11 +725,11 @@ def download_trained_weights(coco_model_path, verbose=1):
     coco_model_path: local path of COCO trained weights
     """
     if verbose > 0:
-        print("Downloading pretrained model to " + coco_model_path + " ...")
+        print("Downloading pretrained models to " + coco_model_path + " ...")
     with contextlib.closing(request.urlopen(COCO_MODEL_URL)) as resp, open(coco_model_path, 'wb') as out:
         shutil.copyfileobj(resp, out)
     if verbose > 0:
-        print("... done downloading pretrained model!")
+        print("... done downloading pretrained models!")
 
 
 def str2bool(v):
@@ -741,3 +741,21 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+def get_colormap(n):
+    def bitget(byteval, idx):
+        return (byteval & (1 << idx)) != 0
+
+    cmap = np.zeros((n, 3), dtype='uint8')
+    for i in range(n):
+        r = g = b = 0
+        c = i
+        for j in range(8):
+            r = r | (bitget(c, 0) << 7 - j)
+            g = g | (bitget(c, 1) << 7 - j)
+            b = b | (bitget(c, 2) << 7 - j)
+            c = c >> 3
+
+        cmap[i] = np.array([r, g, b])
+
+    return cmap

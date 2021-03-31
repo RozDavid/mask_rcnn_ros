@@ -14,22 +14,20 @@ from sensor_msgs.msg import RegionOfInterest
 curPath = os.path.abspath(os.path.dirname(__file__))
 rootPath = os.path.split(curPath)[0]
 sys.path.append(rootPath + "/src/mask_rcnn_ros")
-COCO_MODEL_PATH = '../model/mask_rcnn_coco.h5'
+COCO_MODEL_PATH = '../models/mask_rcnn_coco.h5'
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import coco
+import sunrgbd
 import utils
 import model as modellib
 import visualize
 from mask_rcnn_ros.msg import Result
-import COCODataset as dataset
-from COCODataset import _get_colormap as COCOColormap
 
 RGB_TOPIC = '/hp_laptop/color/image_color'
-
 
 class InferenceConfig(coco.CocoConfig):
     # Set batch size to 1 since we'll be running inference on
@@ -41,9 +39,6 @@ class MaskRCNNNode(object):
     def __init__(self):
         self._cv_bridge = CvBridge()
 
-        config = InferenceConfig()
-        config.display()
-
         parser = argparse.ArgumentParser()
 
         # Parse arguments for global params
@@ -51,6 +46,8 @@ class MaskRCNNNode(object):
                             help='RGB images to run inference on')
         parser.add_argument('--model_path', type=str, default=COCO_MODEL_PATH,
                             help='MASK RCNN checkpoint path - download from the matterport github repo')
+        parser.add_argument('--dataset_name', type=str, default="coco",
+                            help='Either Coco or SunRGBD training set and output labels')
         parser.add_argument("--visualization", default=True, type=utils.str2bool, nargs='?',
                             help="If we would like to visualize the results with masks, names and confidence")
         parser.add_argument("--semantic_topic_name", default='/semantics/semantic_image',
@@ -58,29 +55,32 @@ class MaskRCNNNode(object):
         self.args = parser.parse_args()
 
         self._rgb_input_topic = self.args.input_rgb_topic
-        model_path = self.args.model_path
+        self._model_path = self.args.model_path
         self._visualization = self.args.visualization
         self._semantic_topic_name = self.args.semantic_topic_name
+        self._dataset_name = self.args.dataset_name
 
-        # Create model object in inference mode.
+        if self._dataset_name == "coco":
+            config = coco.CocoConfig()
+            config.display()
+
+        elif self._dataset_name == "sunrgbd":
+            config = sunrgbd.SunRGBDConfig()
+            config.display()
+        else:
+            raise ValueError('Unsupported models type. Should be "sunrgbd" or "coco"')
+
+        # Create models object in inference mode.
         self._model = modellib.MaskRCNN(mode="inference", model_dir="",
                                         config=config)
 
-
-        # Download COCO trained weights from Releases if needed
-        if model_path == COCO_MODEL_PATH and not os.path.exists(COCO_MODEL_PATH):
-            utils.download_trained_weights(COCO_MODEL_PATH)
-
         # Load weights trained on MS-COCO
-        self._model.load_weights(model_path, by_name=True)
+        self._model.load_weights(self._model_path, by_name=True)
 
-        CLASS_NAMES = dataset.COCODataset.CLASS_NAMES
-        CLASS_COLORS = COCOColormap(len(CLASS_NAMES)).tolist()
+        self._class_names = config.CLASS_NAMES
+        self._focused_names = config.FOCUSED_NAMES
+        self._class_colors = config.CLASS_COLORS
 
-        self._class_names = CLASS_NAMES
-        self._focused_names = dataset.COCODataset.FOCUSED_NAMES
-        # self._class_colors = visualize.random_colors(len(CLASS_NAMES))
-        self._class_colors = CLASS_COLORS
 
         self._last_msg = None
         self._msg_lock = threading.Lock()
@@ -108,9 +108,6 @@ class MaskRCNNNode(object):
             if msg is not None:
 
                 np_image = self._cv_bridge.imgmsg_to_cv2(msg, desired_encoding='rgb8').astype(np.float32)
-
-                #np_image = keras_load_img('./../bags/elephant.jpg')
-                #np_image = keras_image_to_array(np_image)
 
                 # Run detection
                 results = self._model.detect([np_image], verbose=0)

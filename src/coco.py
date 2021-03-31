@@ -11,25 +11,26 @@ Written by Waleed Abdulla
 Usage: import the module (see Jupyter notebooks for examples), or run from
        the command line as such:
 
-    # Train a new model starting from pre-trained COCO weights
-    python3 coco.py train --dataset=/path/to/coco/ --model=coco
+    # Train a new models starting from pre-trained COCO weights
+    python3 coco.py train --dataset=/path/to/coco/ --models=coco
 
-    # Train a new model starting from ImageNet weights
-    python3 coco.py train --dataset=/path/to/coco/ --model=imagenet
+    # Train a new models starting from ImageNet weights
+    python3 coco.py train --dataset=/path/to/coco/ --models=imagenet
 
-    # Continue training a model that you had trained earlier
-    python3 coco.py train --dataset=/path/to/coco/ --model=/path/to/weights.h5
+    # Continue training a models that you had trained earlier
+    python3 coco.py train --dataset=/path/to/coco/ --models=/path/to/weights.h5
 
-    # Continue training the last model you trained
-    python3 coco.py train --dataset=/path/to/coco/ --model=last
+    # Continue training the last models you trained
+    python3 coco.py train --dataset=/path/to/coco/ --models=last
 
-    # Run COCO evaluatoin on the last model you trained
-    python3 coco.py evaluate --dataset=/path/to/coco/ --model=last
+    # Run COCO evaluatoin on the last models you trained
+    python3 coco.py evaluate --dataset=/path/to/coco/ --models=last
 """
 
 import os
 import time
 import numpy as np
+import utils
 
 # Download and install the Python COCO tools from https://github.com/waleedka/coco
 # That's a fork from the original https://github.com/pdollar/coco with a bug
@@ -47,7 +48,7 @@ import shutil
 
 from config import Config
 import utils
-import model as modellib
+import models as modellib
 
 # Root directory of the project
 ROOT_DIR = os.path.dirname(__file__)
@@ -55,7 +56,7 @@ ROOT_DIR = os.path.dirname(__file__)
 # Path to trained weights file
 COCO_MODEL_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 
-# Directory to save logs and model checkpoints, if not provided
+# Directory to save logs and models checkpoints, if not provided
 # through the command line argument --logs
 DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 DEFAULT_DATASET_YEAR = "2014"
@@ -75,13 +76,41 @@ class CocoConfig(Config):
 
     # We use a GPU with 12GB memory, which can fit two images.
     # Adjust down if you use a smaller GPU.
-    IMAGES_PER_GPU = 2
+    IMAGES_PER_GPU = 1
 
     # Uncomment to train on 8 GPUs (default is 1)
     # GPU_COUNT = 8
 
     # Number of classes (including background)
     NUM_CLASSES = 1 + 80  # COCO has 80 classes
+
+    # COCO Class names
+    # Index of the class in the list is its ID. For example, to get ID of
+    # the teddy bear class, use: CLASS_NAMES.index('teddy bear')
+    CLASS_NAMES = ['BG', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
+                   'bus', 'train', 'truck', 'boat', 'traffic light',
+                   'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird',
+                   'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear',
+                   'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie',
+                   'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball',
+                   'kite', 'baseball bat', 'baseball glove', 'skateboard',
+                   'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup',
+                   'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
+                   'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza',
+                   'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed',
+                   'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote',
+                   'keyboard', 'cell phone', 'microwave', 'oven', 'toaster',
+                   'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors',
+                   'teddy bear', 'hair drier', 'toothbrush']
+
+    FOCUSED_NAMES = ['BG', 'person', 'backpack', 'umbrella', 'handbag',
+                     'suitcase', 'frisbee', 'bottle', 'wine glass', 'cup', 'bowl',
+                     'chair', 'couch', 'potted plant', 'bed',
+                     'dining table', 'toilet', 'tv', 'laptop',
+                     'keyboard', 'microwave', 'oven', 'toaster',
+                     'sink', 'refrigerator', 'book', 'clock', 'vase']
+
+    CLASS_COLORS = utils.get_colormap(len(CLASS_NAMES))
 
 
 ############################################################
@@ -407,7 +436,7 @@ if __name__ == '__main__':
                         default=DEFAULT_DATASET_YEAR,
                         metavar="<year>",
                         help='Year of the MS-COCO dataset (2014 or 2017) (default=2014)')
-    parser.add_argument('--model', required=True,
+    parser.add_argument('--models', required=True,
                         metavar="/path/to/weights.h5",
                         help="Path to weights .h5 file or 'coco'")
     parser.add_argument('--logs', required=False,
@@ -444,7 +473,7 @@ if __name__ == '__main__':
         config = InferenceConfig()
     config.display()
 
-    # Create model
+    # Create models
     if args.command == "train":
         model = modellib.MaskRCNN(mode="training", config=config,
                                   model_dir=args.logs)
