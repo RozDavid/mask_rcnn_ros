@@ -121,8 +121,10 @@ class MaskRCNNNode(object):
                     image_msg = self._cv_bridge.cv2_to_imgmsg(visualization_result, 'rgb8')
                     vis_pub.publish(image_msg)
 
-                semantic_result = self._semantic_plt(result, np_image).astype(np.uint8)
+                bg_image = np.zeros(np_image.shape, dtype=np_image.dtype)
+                semantic_result = self._semantic_plt(result, bg_image).astype(np.uint8)
                 image_msg = self._cv_bridge.cv2_to_imgmsg(semantic_result, 'rgb8')
+                image_msg.header = msg.header
                 semantics_publisher.publish(image_msg)
 
             rate.sleep()
@@ -207,7 +209,6 @@ class MaskRCNNNode(object):
 
     def _semantic_plt(self, result, image):
 
-        fig, ax = self._get_fig_ax()
         image = visualize.display_masks_plt(
             image,
             result['masks'],

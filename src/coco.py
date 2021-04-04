@@ -48,7 +48,7 @@ import shutil
 
 from config import Config
 import utils
-import models as modellib
+import model as modellib
 
 # Root directory of the project
 ROOT_DIR = os.path.dirname(__file__)
