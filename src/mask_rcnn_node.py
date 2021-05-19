@@ -6,6 +6,7 @@ import threading
 import numpy as np
 from cv_bridge import CvBridge
 import matplotlib.pyplot as plt
+import datetime
 
 import rospy
 from sensor_msgs.msg import Image
@@ -106,7 +107,7 @@ class MaskRCNNNode(object):
                 continue
 
             if msg is not None:
-
+                start = datetime.datetime.now()
                 np_image = self._cv_bridge.imgmsg_to_cv2(msg, desired_encoding='rgb8').astype(np.float32)
 
                 # Run detection
@@ -126,6 +127,13 @@ class MaskRCNNNode(object):
                 image_msg = self._cv_bridge.cv2_to_imgmsg(semantic_result, 'rgb8')
                 image_msg.header = msg.header
                 semantics_publisher.publish(image_msg)
+
+                end = datetime.datetime.now()
+                milis = (end - start).microseconds / 1000.
+                instances = len( result['class_ids'])
+
+                print('Found', instances, ' in ', milis, 'ms')
+
 
             rate.sleep()
 
@@ -209,15 +217,17 @@ class MaskRCNNNode(object):
 
     def _semantic_plt(self, result, image):
 
-        image = visualize.display_masks_plt(
-            image,
-            result['masks'],
-            result['class_ids'],
-            self._class_names,
-            result['scores'],
-            class_colors=self._class_colors)
+        if len( result['masks']) > 0:
+            image = visualize.display_masks_plt(
+                image,
+                result['masks'],
+                result['class_ids'],
+                self._class_names,
+                result['scores'],
+                class_colors=self._class_colors)
 
         return image
+        
 
     def _image_callback(self, msg):
         rospy.logdebug("Get an image")

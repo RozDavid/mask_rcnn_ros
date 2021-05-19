@@ -1,6 +1,6 @@
 <launch>
   
-  <arg name="sensor_name" default="esoptron_laptop" />
+  <arg name="sensor_name" default="hp_laptop" />
   <arg name="sensor_type" default="realsense" />
   <arg name="visualize" default="true" />
 
